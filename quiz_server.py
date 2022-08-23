@@ -1,6 +1,5 @@
 import socket
 from threading import Thread
-import random
 
 server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 ip_address = '127.0.0.1'
@@ -8,54 +7,37 @@ port = 8000
 server.bind((ip_address, port))
 server.listen()
 clients = []
-questions = [
-    "1. What type of animal is a seahorse?\n A)Crustacean\n B) Arachnid\n C) Fish\n D) Shell\n\n",
-    "2. Which of the following dog breeds is the smallest?\n A) Dachshund\n B) Poodle\n C) Pomeranian\n D) Chihuahua"
-    "3. What color are zebras?\n A) White with black stripes\n B) Black with white stripes\n C) Both of the above\n D) None of the above"
-    "4. What existing bird has the largest wingspan?\n A) Stork\n B) Swan\n C) Condor\n D) Albatross"
-    "5. What is the biggest animal that has ever lived?\n A) Blue whale\n B) African elephant\n C) Apatosaurus (aka Brontosaurus)\n D) Spinosaurus"
-]
-answers = ['C', "D", "B", "D", "A"]
-
-def getRandomQuestionAnswer(conn):
-    random_index = random.randint(0, len(questions) - 1)
-    random_question = questions[random_index]
-    random_answer = answer = answers[random_index]
-    conn.send(random_question.encode('utf-8'))
-    return random_index, random_question, random_answer
-
-def removeQuestion(index):
-    questions.pop(index)
-    answers.pop(index)
+list_of_clients = []
+print('server has started')
 
 def remove(connection): 
-    if connection in questions: 
-        questions.remove(connection)
+    if connection in list_of_clients: 
+        list_of_clients.remove(connection)
 
-def clientthread(conn):
-    score = 0
-    conn.send("Welcome to this Animal Quiz Game!".encode('utf-8'))
-    conn.send("You will recieve a Question. You have to choose any of the options from A, B, C or D.".encode('utf-8'))
-    conn.send("Best Of Luck!\n\n")
-    index, question, answer = getRandomQuestionAnswer(conn)
+def broadcast(message, connection): 
+    for clients in list_of_clients: 
+        if clients!=connection: 
+            try: clients.send(message.encode('utf-8')) 
+            except: remove(clients)
+
+def clientthread(conn, addr):
+    conn.send('welcome to this Chat room'.encode('utf-8'))
     while True:
-        try:
+        try: 
             message = conn.recv(2048).decode('utf-8')
-            if message:
-                if message.upper() == answer:
-                    score +=1
-                    conn.send(f"Nice! Your Score is {score}\n\n".encode('utf-8'))
-                else:
-                    conn.send("Woops! That's incorrect.. Better Luck Next Time!\n\n".encode('utf-8'))
-                removeQuestion(index)
-                index, question, answer = getRandomQuestionAnswer(conn)
+            if message: 
+                print ("<" + addr[0] + "> " + message) 
+                message_to_send = "<" + addr[0] + "> " + message 
+                broadcast(message_to_send, conn)
             else:
                 remove(conn)
-        except:
+        except: 
             continue
+
 while True: 
     conn, addr = server.accept() 
-    clients.append(conn)
+    list_of_clients.append(conn)
     print(addr[0] + ' connected')
     new_thread = Thread(target = clientthread, args = (conn, addr))
     new_thread.start()
+
